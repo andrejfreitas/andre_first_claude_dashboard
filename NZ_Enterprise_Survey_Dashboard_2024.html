@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NZ Annual Enterprise Survey 2024 — Industry Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #1a202c; }
+
+  header {
+    background: linear-gradient(135deg, #1a365d 0%, #2a69ac 100%);
+    color: white;
+    padding: 28px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.3px; }
+  header p { margin-top: 6px; font-size: 0.9rem; opacity: 0.8; }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 32px 24px; }
+
+  /* KPI Cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-left: 4px solid #2a69ac;
+  }
+  .kpi-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; font-weight: 600; }
+  .kpi-card .value { font-size: 1.6rem; font-weight: 700; color: #1a365d; margin-top: 6px; }
+  .kpi-card .sub { font-size: 0.78rem; color: #a0aec0; margin-top: 3px; }
+
+  /* Controls */
+  .controls-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+  }
+  .controls-card label { font-size: 0.82rem; font-weight: 600; color: #4a5568; margin-bottom: 4px; display: block; }
+  .controls-card select {
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: #2d3748;
+    background: #f7fafc;
+    cursor: pointer;
+    min-width: 220px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .controls-card select:focus { border-color: #2a69ac; }
+
+  .cat-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cat-tab {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #718096;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cat-tab:hover { border-color: #2a69ac; color: #2a69ac; }
+  .cat-tab.active { background: #2a69ac; border-color: #2a69ac; color: white; }
+
+  .sort-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .sort-toggle label { font-size: 0.82rem; font-weight: 600; color: #4a5568; margin: 0; }
+  .sort-toggle select { min-width: 140px; }
+
+  /* Charts grid */
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .chart-card h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 4px;
+  }
+  .chart-card .chart-sub {
+    font-size: 0.78rem;
+    color: #a0aec0;
+    margin-bottom: 18px;
+  }
+  .chart-wrapper { position: relative; }
+
+  /* Table */
+  .table-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .table-card h2 { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    background: #edf2f7;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    color: #4a5568;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f4f8; color: #2d3748; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f7fafc; }
+  .rank-badge {
+    display: inline-block;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: #ebf4ff;
+    color: #2a69ac;
+    text-align: center;
+    line-height: 24px;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+  .rank-badge.gold { background: #fef9c3; color: #b45309; }
+  .rank-badge.silver { background: #f1f5f9; color: #475569; }
+  .rank-badge.bronze { background: #fef3c7; color: #92400e; }
+  .bar-cell { display: flex; align-items: center; gap: 10px; }
+  .mini-bar-bg { flex: 1; background: #edf2f7; border-radius: 4px; height: 8px; overflow: hidden; }
+  .mini-bar { height: 100%; background: linear-gradient(90deg, #2a69ac, #63b3ed); border-radius: 4px; transition: width 0.4s ease; }
+
+  footer { text-align: center; color: #a0aec0; font-size: 0.78rem; padding: 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇳🇿 New Zealand Annual Enterprise Survey — 2024</h1>
+  <p>Industry-level financial performance, position &amp; ratios · Provisional data · Financial year ended March 2024</p>
+</header>
+
+<div class="container">
+
+  <!-- KPI Cards -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- Controls -->
+  <div class="controls-card">
+    <div>
+      <label>Category</label>
+      <div class="cat-tabs" id="catTabs">
+        <button class="cat-tab active" data-cat="Financial performance">Financial Performance</button>
+        <button class="cat-tab" data-cat="Financial position">Financial Position</button>
+        <button class="cat-tab" data-cat="Financial ratios">Financial Ratios</button>
+      </div>
+    </div>
+    <div>
+      <label for="metricSelect">Metric</label>
+      <select id="metricSelect"></select>
+    </div>
+    <div class="sort-toggle">
+      <label for="sortSelect">Sort</label>
+      <select id="sortSelect">
+        <option value="desc">Highest first</option>
+        <option value="asc">Lowest first</option>
+        <option value="alpha">Alphabetical</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2 id="barTitle">Industry Comparison</h2>
+      <div class="chart-sub" id="barSub"></div>
+      <div class="chart-wrapper" style="height: 420px;">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h2>Industry Share</h2>
+      <div class="chart-sub">Share of total across all industries</div>
+      <div class="chart-wrapper" style="height: 420px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <h2 id="tableTitle">Rankings</h2>
+    <table id="rankTable">
+      <thead>
+        <tr>
+          <th style="width:50px">Rank</th>
+          <th>Industry</th>
+          <th>Value</th>
+          <th style="width:200px">Share of Total</th>
+        </tr>
+      </thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>Data source: Statistics New Zealand — Annual Enterprise Survey 2024 (Provisional) · Built with Claude</footer>
+
+<script>
+const RAW = {"industries": ["Agriculture, Forestry and Fishing", "Arts, Recreation and Other Services", "Construction", "Education and Training", "Electricity, Gas, Water and Waste Services", "Financial and Insurance Services", "Health Care and Social Assistance", "Information Media and Telecommunications", "Manufacturing", "Mining", "Professional, Scientific, Technical, Administrative and Support Services", "Public Order, Safety and Regulatory Services", "Rental, Hiring and Real Estate Services", "Retail Trade and Accommodation", "Transport, Postal and Warehousing", "Wholesale Trade"], "variables": {"Total income": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"unit": "Percentage", "category": "Financial ratios"}, "Additions to fixed assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"unit": "Dollars (millions)", "category": "Financial position"}, "Sales of goods not further processed": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of other goods and services": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases of goods bought for resale": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Other Purchases and operating expenses": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Margin on sales of goods for resale": {"unit": "Percentage", "category": "Financial ratios"}, "Salaries and wages to self employed commission agents": {"unit": "Dollars (millions)", "category": "Financial performance"}, "Sales, government funding, grants and subsidies": {"unit": "Dollars (millions)", "category": "Financial performance"}}, "data": {"Agriculture, Forestry and Fishing": {"Total income": {"value": 54775.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 50175.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 1545.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 37.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 3018.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 48903.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 4708.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 549.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2704.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 7090.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 1.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 32715.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 1137.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 14155.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 13742.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 5459.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 220421.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 37522.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 127458.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 55442.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 220421.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 106476.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 39312.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 74633.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 487400.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 48600.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 95.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 60.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 5.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 2.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 48.0, "unit": "Percentage", "category": "Financial ratios"}}, "Mining": {"Total income": {"value": 5758.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 5465.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 184.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 0.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 109.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 5237.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 245.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 49.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 1034.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 798.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 1.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 2732.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 379.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 465.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 506.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 562.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 12868.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 4065.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 5725.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 1201.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 369.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 3078.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 12868.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 4269.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 3910.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 4688.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 957700.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 93500.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 104.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 91.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 13.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 4.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 33.0, "unit": "Percentage", "category": "Financial ratios"}}, "Manufacturing": {"Total income": {"value": 127367.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods not further processed": {"value": 7334.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of other goods and services": {"value": 118259.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 683.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 159.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 932.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 120248.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1397.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 1060.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 4112.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 19653.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 51.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases of goods bought for resale": {"value": 4695.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Other Purchases and operating expenses": {"value": 88387.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 944.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 19395.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 19155.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 6880.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 108120.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 50542.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 33585.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 5864.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 1465.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 23994.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 108120.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 49176.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 35124.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 23821.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 526800.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 28500.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 144.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 89.0, "unit": "Percentage", "category": "Financial ratios"}, "Margin on sales of goods for resale": {"value": 36.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 14.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 6.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 45.0, "unit": "Percentage", "category": "Financial ratios"}}, "Electricity, Gas, Water and Waste Services": {"Total income": {"value": 28145.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 26994.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 186.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 66.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 898.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 25139.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1222.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 226.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 3077.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 2289.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 7.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 17671.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 655.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 671.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 658.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 2993.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 96101.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 7779.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 77276.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 6320.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 823.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 11046.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 96101.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 45865.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 10019.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 40217.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 1210200.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 128700.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 78.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 71.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 7.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 3.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 48.0, "unit": "Percentage", "category": "Financial ratios"}}, "Construction": {"Total income": {"value": 103945.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 102900.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 747.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 28.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 271.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 95557.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1422.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 290.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2294.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 19847.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 5.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 71197.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 507.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 13046.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 12853.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 8195.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 70830.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 42833.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 17528.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 4374.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 1575.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 10469.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 70830.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 21156.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 32326.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 17349.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 488800.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 38500.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 133.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 93.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 39.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 12.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 30.0, "unit": "Percentage", "category": "Financial ratios"}}, "Wholesale Trade": {"Total income": {"value": 157019.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods not further processed": {"value": 136224.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of other goods and services": {"value": 19102.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 1052.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 7.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 634.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 150683.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1315.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 3321.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 1930.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 10948.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 31.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases of goods bought for resale": {"value": 110667.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Other Purchases and operating expenses": {"value": 21648.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 853.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 20738.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 19874.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 5472.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 89590.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 58839.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 10284.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 2163.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 821.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 20466.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 89590.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 31926.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 42038.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 15626.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 1292600.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 45000.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 140.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 93.0, "unit": "Percentage", "category": "Financial ratios"}, "Margin on sales of goods for resale": {"value": 19.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 17.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 6.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 36.0, "unit": "Percentage", "category": "Financial ratios"}}, "Retail Trade and Accommodation": {"Total income": {"value": 119689.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods not further processed": {"value": 97293.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of other goods and services": {"value": 20243.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 998.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 31.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 1124.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 113037.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1320.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 380.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2802.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 18461.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 9.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases of goods bought for resale": {"value": 69373.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Other Purchases and operating expenses": {"value": 20302.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 400.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 11494.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 11467.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 6625.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 75543.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 30083.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 23125.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 4328.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 1949.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 22334.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 75543.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 24005.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 30910.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 20628.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 297100.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 16400.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 97.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 60.0, "unit": "Percentage", "category": "Financial ratios"}, "Margin on sales of goods for resale": {"value": 29.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 28.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 9.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 32.0, "unit": "Percentage", "category": "Financial ratios"}}, "Transport, Postal and Warehousing": {"Total income": {"value": 37415.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 35502.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 709.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 744.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 459.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 35024.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1007.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 740.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2893.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 8924.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 14.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 19871.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 1587.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 520.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 503.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 2374.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 69769.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 13434.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 44215.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 6456.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 912.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 12120.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 69769.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 37340.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 14199.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 18230.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 360700.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 22900.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 95.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 91.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 6.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 3.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 54.0, "unit": "Percentage", "category": "Financial ratios"}}, "Information Media and Telecommunications": {"Total income": {"value": 17165.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 16581.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 188.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 201.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 195.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 16248.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 714.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 50.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2306.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 3079.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 34.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 9745.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 354.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 456.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 313.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 774.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 29650.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 6241.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 13045.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 2029.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 172.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 10364.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 29650.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 9612.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 6303.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 13735.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 554700.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 25000.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 99.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 94.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 8.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 3.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 32.0, "unit": "Percentage", "category": "Financial ratios"}}, "Financial and Insurance Services": {"Total income": {"value": 136335.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 29829.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 93663.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 91.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 12751.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 87056.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 48086.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 135.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 1615.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 9523.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 84.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages to self employed commission agents": {"value": 397.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 22793.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 4507.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 211.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 221.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 49289.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 1513129.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 473094.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 35790.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 8645.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 3463.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 1004244.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 1513129.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 402354.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 698430.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 412344.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 1944500.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 703000.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 68.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 68.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 12.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 3.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 27.0, "unit": "Percentage", "category": "Financial ratios"}}, "Rental, Hiring and Real Estate Services": {"Total income": {"value": 45865.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 36305.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 5424.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 52.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 4084.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 32745.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 7041.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 1074.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 3984.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 3349.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 3.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages to self employed commission agents": {"value": 1151.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 13129.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 3017.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 3321.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 3366.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 13165.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 392084.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 48353.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 282852.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 31656.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 14923.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 60879.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 392084.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 193911.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 76467.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 121706.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 1369600.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 393100.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 63.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 59.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 7.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 3.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 49.0, "unit": "Percentage", "category": "Financial ratios"}}, "Professional, Scientific, Technical, Administrative and Support Services": {"Total income": {"value": 81660.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 76123.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 2293.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 334.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 2910.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 70081.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1387.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 201.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 2239.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 29643.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 70.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 35758.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 854.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 1333.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 1406.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 11651.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 163389.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 111544.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 13281.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 4295.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 2104.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 38563.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 163389.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 32348.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 109969.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 21072.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 268400.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 38300.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 101.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 100.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 36.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 7.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 20.0, "unit": "Percentage", "category": "Financial ratios"}}, "Public Order, Safety and Regulatory Services": {"Total income": {"value": 2365.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales of goods and services": {"value": 2282.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 76.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Government funding, grants and subsidies": {"value": 2.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 4.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 2180.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 40.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 10.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 82.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 1160.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 3.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 879.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 9.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 36.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 29.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 178.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 1714.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 743.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 355.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 112.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 26.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 616.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 1714.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 583.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 602.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 529.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current ratio": {"value": 123.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 119.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 30.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 10.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 34.0, "unit": "Percentage", "category": "Financial ratios"}}, "Education and Training": {"Total income": {"value": 5972.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 324.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales, government funding, grants and subsidies": {"value": 5598.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 50.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 5564.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 101.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 31.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 198.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 2950.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 3.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 2123.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 159.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 11.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 12.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 408.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 9049.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 2490.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 3875.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 370.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 139.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 2683.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 9049.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 5495.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 2042.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 1512.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current ratio": {"value": 122.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 121.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 7.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 5.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 61.0, "unit": "Percentage", "category": "Financial ratios"}}, "Health Care and Social Assistance": {"Total income": {"value": 29622.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 958.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales, government funding, grants and subsidies": {"value": 28311.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 353.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 26401.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 439.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 86.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 691.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 12872.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 2.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 11865.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 449.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 103.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 139.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 3257.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 39365.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 9365.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 16809.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 2053.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 644.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 13191.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 39365.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 19978.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 8345.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 11042.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current ratio": {"value": 112.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 111.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 16.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 8.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 51.0, "unit": "Percentage", "category": "Financial ratios"}}, "Arts, Recreation and Other Services": {"Total income": {"value": 26496.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales, government funding, grants and subsidies": {"value": 22351.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 3157.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 988.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 22855.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 1049.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 336.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 936.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 7030.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 3.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 13301.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 204.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 731.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 746.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 3656.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 40184.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 14206.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 14756.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Additions to fixed assets": {"value": 1914.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Disposals of fixed assets": {"value": 673.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 11222.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 40184.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 27085.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 8380.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 4719.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 239900.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 33100.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 170.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 161.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 13.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 9.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 67.0, "unit": "Percentage", "category": "Financial ratios"}}}, "all_industries": {"Total income": {"value": 979594.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Sales, government funding, grants and subsidies": {"value": 838626.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest, dividends and donations": {"value": 112188.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating income": {"value": 28781.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total expenditure": {"value": 856960.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Interest and donations": {"value": 71493.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Indirect taxes": {"value": 8540.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Depreciation": {"value": 32896.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages paid": {"value": 157616.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Redundancy and severance": {"value": 323.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Salaries and wages to self employed commission agents": {"value": 1548.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Purchases and other operating expenses": {"value": 568850.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Non-operating expenses": {"value": 16016.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Opening stocks": {"value": 86685.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Closing stocks": {"value": 84990.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Surplus before income tax": {"value": 120939.0, "unit": "Dollars (millions)", "category": "Financial performance"}, "Total assets": {"value": 2931807.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current assets": {"value": 911135.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Fixed tangible assets": {"value": 719959.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other assets": {"value": 1300713.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total equity and liabilities": {"value": 2931807.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Shareholders funds or owners equity": {"value": 1011581.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Current liabilities": {"value": 1118376.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Other liabilities": {"value": 801850.0, "unit": "Dollars (millions)", "category": "Financial position"}, "Total income per employee count": {"value": 483100.0, "unit": "Dollars", "category": "Financial ratios"}, "Surplus per employee count": {"value": 59600.0, "unit": "Dollars", "category": "Financial ratios"}, "Current ratio": {"value": 81.0, "unit": "Percentage", "category": "Financial ratios"}, "Quick ratio": {"value": 74.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on equity": {"value": 12.0, "unit": "Percentage", "category": "Financial ratios"}, "Return on total assets": {"value": 4.0, "unit": "Percentage", "category": "Financial ratios"}, "Liabilities structure": {"value": 35.0, "unit": "Percentage", "category": "Financial ratios"}}};
+
+const PALETTE = [
+  '#2a69ac','#3182ce','#4299e1','#63b3ed','#90cdf4',
+  '#48bb78','#38a169','#2f855a','#68d391','#f6ad55',
+  '#ed8936','#dd6b20','#e53e3e','#fc8181','#9f7aea','#b794f4'
+];
+
+let currentCat = 'Financial performance';
+let currentMetric = 'Total income';
+let currentSort = 'desc';
+let barChart = null;
+let donutChart = null;
+
+// --- Build variable lists per category ---
+const varsByCategory = {};
+for (const [v, info] of Object.entries(RAW.variables)) {
+  const c = info.category;
+  if (!varsByCategory[c]) varsByCategory[c] = [];
+  varsByCategory[c].push(v);
+}
+
+// --- KPI Cards ---
+function formatVal(v, unit) {
+  if (unit === 'Dollars (millions)') {
+    if (v >= 1000000) return '$' + (v/1000000).toFixed(2) + 'T';
+    if (v >= 1000) return '$' + (v/1000).toFixed(1) + 'B';
+    return '$' + v.toLocaleString() + 'M';
+  }
+  if (unit === 'Dollars') return '$' + v.toLocaleString();
+  if (unit === 'Percentage') return v.toFixed(1) + '%';
+  return v.toLocaleString();
+}
+
+function buildKPIs() {
+  const ai = RAW.all_industries;
+  const metrics = [
+    ['Total income', 'Total Income'],
+    ['Surplus before income tax', 'Surplus (Pre-tax)'],
+    ['Total assets', 'Total Assets'],
+    ['Salaries and wages paid', 'Wages Paid'],
+    ['Total expenditure', 'Total Expenditure'],
+  ];
+  const row = document.getElementById('kpiRow');
+  row.innerHTML = '';
+  for (const [key, label] of metrics) {
+    if (ai[key]) {
+      const info = ai[key];
+      row.innerHTML += `<div class="kpi-card">
+        <div class="label">${label}</div>
+        <div class="value">${formatVal(info.value, info.unit)}</div>
+        <div class="sub">All industries · 2024</div>
+      </div>`;
+    }
+  }
+}
+
+// --- Populate metric dropdown ---
+function populateMetrics() {
+  const sel = document.getElementById('metricSelect');
+  sel.innerHTML = '';
+  const vars = varsByCategory[currentCat] || [];
+  for (const v of vars) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    if (v === currentMetric) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  // If current metric not in this category, default to first
+  if (!vars.includes(currentMetric)) {
+    currentMetric = vars[0];
+    sel.value = currentMetric;
+  }
+}
+
+// --- Get sorted data for current metric ---
+function getSortedData() {
+  const pairs = RAW.industries.map(ind => {
+    const val = (RAW.data[ind] && RAW.data[ind][currentMetric]) ? RAW.data[ind][currentMetric].value : null;
+    return { industry: ind, value: val };
+  }).filter(p => p.value !== null);
+
+  if (currentSort === 'desc') pairs.sort((a,b) => b.value - a.value);
+  else if (currentSort === 'asc') pairs.sort((a,b) => a.value - b.value);
+  else pairs.sort((a,b) => a.industry.localeCompare(b.industry));
+
+  return pairs;
+}
+
+// Short label helper
+function shortLabel(s) {
+  const m = {
+    'Agriculture, Forestry and Fishing': 'Agriculture',
+    'Arts, Recreation and Other Services': 'Arts & Recreation',
+    'Construction': 'Construction',
+    'Education and Training': 'Education',
+    'Electricity, Gas, Water and Waste Services': 'Electricity & Utilities',
+    'Financial and Insurance Services': 'Finance & Insurance',
+    'Health Care and Social Assistance': 'Health Care',
+    'Information Media and Telecommunications': 'ICT & Media',
+    'Manufacturing': 'Manufacturing',
+    'Mining': 'Mining',
+    'Professional, Scientific, Technical, Administrative and Support Services': 'Prof. & Admin Services',
+    'Public Order, Safety and Regulatory Services': 'Public Order',
+    'Rental, Hiring and Real Estate Services': 'Real Estate',
+    'Retail Trade and Accommodation': 'Retail & Accommodation',
+    'Transport, Postal and Warehousing': 'Transport',
+    'Wholesale Trade': 'Wholesale Trade'
+  };
+  return m[s] || s;
+}
+
+// --- Render bar chart ---
+function renderBar(pairs) {
+  const unit = RAW.variables[currentMetric] ? RAW.variables[currentMetric].unit : '';
+  const labels = pairs.map(p => shortLabel(p.industry));
+  const values = pairs.map(p => p.value);
+
+  document.getElementById('barTitle').textContent = currentMetric + ' by Industry';
+  document.getElementById('barSub').textContent = unit + ' · 2024 · Level 1 industries';
+
+  if (barChart) barChart.destroy();
+  const ctx = document.getElementById('barChart').getContext('2d');
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: currentMetric,
+        data: values,
+        backgroundColor: PALETTE.slice(0, values.length).map(c => c + 'cc'),
+        borderColor: PALETTE.slice(0, values.length),
+        borderWidth: 1.5,
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ' + formatVal(ctx.parsed.x, unit)
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#f0f4f8' },
+          ticks: {
+            font: { size: 11 },
+            callback: v => formatVal(v, unit)
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// --- Render donut chart ---
+function renderDonut(pairs) {
+  const unit = RAW.variables[currentMetric] ? RAW.variables[currentMetric].unit : '';
+  const total = pairs.reduce((s, p) => s + p.value, 0);
+  // Top 8 + "Others"
+  const top = pairs.slice(0, 8);
+  const rest = pairs.slice(8);
+  const labels = top.map(p => shortLabel(p.industry));
+  const values = top.map(p => p.value);
+  if (rest.length > 0) {
+    labels.push('Other industries');
+    values.push(rest.reduce((s,p) => s + p.value, 0));
+  }
+
+  if (donutChart) donutChart.destroy();
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: [...PALETTE.slice(0, 8), '#cbd5e0'],
+        borderColor: 'white',
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 10 }, boxWidth: 12, padding: 8 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = ((ctx.parsed / total) * 100).toFixed(1);
+              return ` ${formatVal(ctx.parsed, unit)} (${pct}%)`;
+            }
+          }
+        }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+// --- Render table ---
+function renderTable(pairs) {
+  const unit = RAW.variables[currentMetric] ? RAW.variables[currentMetric].unit : '';
+  const total = pairs.reduce((s,p) => s + p.value, 0);
+  const maxVal = Math.max(...pairs.map(p => p.value));
+
+  document.getElementById('tableTitle').textContent = currentMetric + ' — Full Rankings';
+
+  const body = document.getElementById('rankBody');
+  body.innerHTML = '';
+  const sorted = [...pairs].sort((a,b) => b.value - a.value);
+
+  sorted.forEach((p, i) => {
+    const rank = i + 1;
+    const pct = total > 0 ? (p.value / total * 100).toFixed(1) : '—';
+    const barWidth = maxVal > 0 ? (p.value / maxVal * 100).toFixed(1) : 0;
+    const badgeClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+    body.innerHTML += `<tr>
+      <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+      <td>${p.industry}</td>
+      <td><strong>${formatVal(p.value, unit)}</strong></td>
+      <td>
+        <div class="bar-cell">
+          <div class="mini-bar-bg"><div class="mini-bar" style="width:${barWidth}%"></div></div>
+          <span style="font-size:0.78rem;color:#718096;min-width:36px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+}
+
+// --- Main render ---
+function render() {
+  populateMetrics();
+  const pairs = getSortedData();
+  renderBar(pairs);
+  renderDonut(pairs);
+  renderTable(pairs);
+}
+
+// --- Event listeners ---
+document.querySelectorAll('.cat-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    const vars = varsByCategory[currentCat] || [];
+    currentMetric = vars[0] || currentMetric;
+    render();
+  });
+});
+
+document.getElementById('metricSelect').addEventListener('change', e => {
+  currentMetric = e.target.value;
+  render();
+});
+
+document.getElementById('sortSelect').addEventListener('change', e => {
+  currentSort = e.target.value;
+  render();
+});
+
+// --- Init ---
+buildKPIs();
+render();
+</script>
+</body>
+</html>
